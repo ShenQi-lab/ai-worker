@@ -476,15 +476,15 @@
 
       if (isUser) {
         wrapper.innerHTML = `
-      <div style="max-width:70%; background:#2D3748; color:#FFFBF0; padding:8px 12px; font-size:13px; line-height:1.35; border-radius:10px 10px 10px 3px; box-shadow:0 1px 2px rgba(0,0,0,0.05); white-space:pre-wrap; word-break:break-word;">
+      <div style="max-width:70% !important; background:#2D3748 !important; color:#FFFBF0 !important; padding:8px 12px !important; font-size:13px !important; line-height:1.35 !important; border-radius:10px 10px 10px 3px !important; box-shadow:0 1px 2px rgba(0,0,0,0.05) !important; white-space:pre-wrap !important; word-break:break-word !important; border:3px solid red !important;">
         ${escapeHtml(content)}
       </div>
     `;
       } else {
         wrapper.innerHTML = `
-      <div style="display:flex; align-items:flex-start; gap:6px; max-width:70%;">
-        <div style="width:24px; height:24px; border-radius:50%; background:#C9A96E; display:flex; align-items:center; justify-content:center; color:white; font-size:9px; font-weight:bold; flex-shrink:0; margin-top:1px;">AI</div>
-        <div style="background:#FFFBF0; color:#4A4A4A; border:1px solid #F0E6D3; padding:8px 12px; font-size:13px; line-height:1.35; border-radius:10px 10px 3px 10px; box-shadow:0 1px 2px rgba(0,0,0,0.05); white-space:pre-wrap; word-break:break-word;">
+      <div style="display:flex !important; align-items:flex-start !important; gap:6px !important; max-width:70% !important;">
+        <div style="width:24px !important; height:24px !important; border-radius:50% !important; background:#C9A96E !important; display:flex !important; align-items:center !important; justify-content:center !important; color:white !important; font-size:9px !important; font-weight:bold !important; flex-shrink:0 !important; margin-top:1px !important;">AI</div>
+        <div style="background:#FFFBF0 !important; color:#4A4A4A !important; border:3px solid red !important; padding:8px 12px !important; font-size:13px !important; line-height:1.35 !important; border-radius:10px 10px 3px 10px !important; box-shadow:0 1px 2px rgba(0,0,0,0.05) !important; white-space:pre-wrap !important; word-break:break-word !important;">
           ${escapeHtml(content)}
         </div>
       </div>
