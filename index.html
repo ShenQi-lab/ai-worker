@@ -363,6 +363,26 @@
       });
     }
 
+    function getDeviceFingerprint() {
+      let fp = localStorage.getItem('ai_worker_fp');
+      if (!fp) {
+        const raw = [
+          screen.width,
+          screen.height,
+          navigator.language,
+          Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ].join('|');
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+          hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+          hash |= 0;
+        }
+        fp = Math.abs(hash).toString(16).substring(0, 8);
+        localStorage.setItem('ai_worker_fp', fp);
+      }
+      return fp;
+    }
+
     function getUserId() {
       let uid = localStorage.getItem(USER_ID_KEY);
       if (!uid) {
@@ -505,7 +525,7 @@
         const res = await fetch(`${API_BASE}/get-user-quota`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: getUserId() }),
+          body: JSON.stringify({ user_id: getUserId(), device_fp: getDeviceFingerprint() }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '获取配额失败');
@@ -585,7 +605,7 @@
         const res = await fetch(`${API_BASE}/chat-with-bot`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: getUserId(), message: text }),
+          body: JSON.stringify({ user_id: getUserId(), device_fp: getDeviceFingerprint(), message: text }),
         });
 
         const data = await res.json();

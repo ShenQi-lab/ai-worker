@@ -15,6 +15,39 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+// ===================== 防刷辅助函数 =====================
+function getClientIP(req: Request): string | null {
+  const xf = req.headers.get("x-forwarded-for");
+  if (xf) return xf.split(",")[0].trim();
+  const xr = req.headers.get("x-real-ip");
+  if (xr) return xr.trim();
+  return null;
+}
+
+async function checkRateLimit(ip: string | null): Promise<boolean> {
+  if (!ip) return true;
+  const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+  const { count, error } = await supabaseAdmin
+    .from("rate_limit_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("ip_address", ip)
+    .gte("window_start", today);
+  if (error) {
+    console.error("rate limit check error:", error);
+    return true;
+  }
+  return (count || 0) < 3;
+}
+
+async function recordRateLimit(ip: string | null, userId: string) {
+  if (!ip) return;
+  await supabaseAdmin.from("rate_limit_logs").insert({
+    user_id: userId,
+    ip_address: ip,
+    window_start: new Date().toISOString(),
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -29,7 +62,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { user_id } = body;
+    const { user_id, device_fp } = body;
+    const clientIP = getClientIP(req);
 
     if (!user_id || typeof user_id !== "string") {
       return new Response(
@@ -46,6 +80,15 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (error && error.code === "PGRST116") {
+      // 新用户，检查 IP 防刷
+      const allowed = await checkRateLimit(clientIP);
+      if (!allowed) {
+        return new Response(
+          JSON.stringify({ error: "今日注册次数已达上限" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const { data: newQuota, error: insertError } = await supabaseAdmin
         .from("user_quotas")
         .insert({
@@ -60,6 +103,9 @@ Deno.serve(async (req: Request) => {
 
       if (insertError) throw insertError;
       quota = newQuota;
+
+      // 记录本次注册到限流日志
+      await recordRateLimit(clientIP, user_id);
     } else if (error) {
       throw error;
     }

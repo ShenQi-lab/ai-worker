@@ -30,6 +30,41 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 // ============================================================
+// 防刷辅助函数
+// ============================================================
+function getClientIP(req: Request): string | null {
+  const xf = req.headers.get("x-forwarded-for");
+  if (xf) return xf.split(",")[0].trim();
+  const xr = req.headers.get("x-real-ip");
+  if (xr) return xr.trim();
+  return null;
+}
+
+async function checkRateLimit(ip: string | null): Promise<boolean> {
+  if (!ip) return true;
+  const today = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
+  const { count, error } = await supabaseAdmin
+    .from("rate_limit_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("ip_address", ip)
+    .gte("window_start", today);
+  if (error) {
+    console.error("rate limit check error:", error);
+    return true;
+  }
+  return (count || 0) < 3;
+}
+
+async function recordRateLimit(ip: string | null, userId: string) {
+  if (!ip) return;
+  await supabaseAdmin.from("rate_limit_logs").insert({
+    user_id: userId,
+    ip_address: ip,
+    window_start: new Date().toISOString(),
+  });
+}
+
+// ============================================================
 // 读取扣子私钥
 // ============================================================
 function loadPrivateKey(): string {
@@ -144,7 +179,7 @@ async function callCozeBot(
 // ============================================================
 // 获取或初始化用户配额
 // ============================================================
-async function getOrCreateQuota(userId: string) {
+async function getOrCreateQuota(userId: string, clientIP: string | null) {
   // 先尝试查询
   let { data: quota, error } = await supabaseAdmin
     .from("user_quotas")
@@ -153,6 +188,12 @@ async function getOrCreateQuota(userId: string) {
     .single();
 
   if (error && error.code === "PGRST116") {
+    // 新用户，检查 IP 防刷
+    const allowed = await checkRateLimit(clientIP);
+    if (!allowed) {
+      throw new Error("RATE_LIMITED:今日注册次数已达上限");
+    }
+
     // 记录不存在，自动创建
     const { data: newQuota, error: insertError } = await supabaseAdmin
       .from("user_quotas")
@@ -168,6 +209,9 @@ async function getOrCreateQuota(userId: string) {
 
     if (insertError) throw insertError;
     quota = newQuota;
+
+    // 记录本次注册到限流日志
+    await recordRateLimit(clientIP, userId);
   } else if (error) {
     throw error;
   }
@@ -307,7 +351,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { message, user_id } = body;
+    const { message, user_id, device_fp } = body;
+    const clientIP = getClientIP(req);
 
     // 参数校验
     if (!message || typeof message !== "string") {
@@ -324,7 +369,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 1. 获取用户配额
-    const quota = await getOrCreateQuota(user_id);
+    const quota = await getOrCreateQuota(user_id, clientIP);
 
     // 2. 风控校验
     const riskCheck = await checkRiskControl(quota, message);
@@ -367,6 +412,12 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err: any) {
     console.error("chat-with-bot error:", err);
+    if (err.message?.startsWith("RATE_LIMITED:")) {
+      return new Response(
+        JSON.stringify({ error: err.message.replace("RATE_LIMITED:", "") }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     return new Response(
       JSON.stringify({ error: err.message || "Internal Server Error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
