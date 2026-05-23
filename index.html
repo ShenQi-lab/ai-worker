@@ -200,8 +200,8 @@
         class="w-16 h-16 rounded-full bg-charcoal flex items-center justify-center text-white text-xl font-bold mb-5 breathe">
         AI
       </div>
-      <h2 class="text-lg font-semibold text-charcoal mb-2">有什么可以帮您？</h2>
-      <p class="text-sm text-messageGray/60 mb-8 leading-relaxed">
+      <h2 id="welcomeTitle" class="text-lg font-semibold text-charcoal mb-2">有什么可以帮您？</h2>
+      <p id="welcomeSubtitle" class="text-sm text-messageGray/60 mb-8 leading-relaxed">
         您的智能助手，随时待命<br>新用户赠送 3 次免费对话
       </p>
       <div class="flex flex-wrap gap-2.5 justify-center w-full max-w-sm">
@@ -335,6 +335,8 @@
     const charCount = document.getElementById('charCount');
     const quotaStatus = document.getElementById('quotaStatus');
     const membershipBadge = document.getElementById('membershipBadge');
+    const welcomeTitle = document.getElementById('welcomeTitle');
+    const welcomeSubtitle = document.getElementById('welcomeSubtitle');
     const toast = document.getElementById('toast');
     const toastInner = document.getElementById('toastInner');
     const toastText = document.getElementById('toastText');
@@ -531,22 +533,35 @@
       if (membership === 'free') {
         membershipBadge.classList.add('hidden');
         quotaStatus.textContent = `剩余${remaining}次 · 升级会员`;
+        welcomeTitle.textContent = '有什么可以帮您？';
+        welcomeSubtitle.innerHTML = '您的智能助手，随时待命<br>新用户赠送 3 次免费对话';
       } else if (membership === 'daily') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '日卡';
+        const left = Math.max(0, dailyLimit - dailyUsed);
         quotaStatus.textContent = `日卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
+        welcomeTitle.textContent = '欢迎回来';
+        welcomeSubtitle.innerHTML = `您的日卡会员权益已激活<br>剩余 ${left} 次对话额度`;
       } else if (membership === 'weekly') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '周卡';
+        const left = Math.max(0, dailyLimit - dailyUsed);
         const remainText = totalLimit ? `${remaining}/${totalLimit}` : `${dailyUsed}/${dailyLimit}`;
         quotaStatus.textContent = `周卡会员 · 剩余${remainText}次`;
+        welcomeTitle.textContent = '欢迎回来';
+        welcomeSubtitle.innerHTML = `您的周卡会员权益已激活<br>剩余 ${left} 次对话额度`;
       } else if (membership === 'monthly') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '月卡';
+        const left = Math.max(0, dailyLimit - dailyUsed);
         quotaStatus.textContent = `月卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
+        welcomeTitle.textContent = '欢迎回来';
+        welcomeSubtitle.innerHTML = `您的月卡会员权益已激活<br>剩余 ${left} 次对话额度`;
       } else {
         membershipBadge.classList.add('hidden');
         quotaStatus.textContent = `剩余${remaining}次`;
+        welcomeTitle.textContent = '有什么可以帮您？';
+        welcomeSubtitle.innerHTML = '您的智能助手，随时待命<br>新用户赠送 3 次免费对话';
       }
     }
 
