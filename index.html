@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI 虚拟员工</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FAF9F6',
+            ivory: '#FFFFF0',
+            charcoal: '#2C2C2C',
+            warmGold: '#C9A96E',
+            messageGray: '#4A4A4A',
+            borderLight: '#E8E8E3',
+            inputBg: '#F5F5F0',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 隐藏滚动条 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 打字机动画 */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-appear { animation: fadeInUp 0.3s ease-out forwards; }
+
+    /* 加载动画 - 三个圆点脉冲 */
+    @keyframes pulseDot {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .dot {
+      width: 8px; height: 8px;
+      background: #C9A96E;
+      border-radius: 50%;
+      animation: pulseDot 1.4s infinite ease-in-out both;
+    }
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+
+    /* Toast 滑入 */
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(-100%); opacity: 0; }
+    }
+    .toast-in { animation: slideDown 0.3s ease-out forwards; }
+    .toast-out { animation: slideUp 0.3s ease-in forwards; }
+
+    /* 底部面板滑入 */
+    @keyframes slideUpPanel {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    @keyframes fadeInOverlay {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .panel-in { animation: slideUpPanel 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .overlay-in { animation: fadeInOverlay 0.25s ease-out forwards; }
+
+    /* 呼吸光环 */
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201, 169, 110, 0.3); }
+      50% { box-shadow: 0 0 0 8px rgba(201, 169, 110, 0); }
+    }
+    .breathe { animation: breathe 2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="bg-cream h-screen w-full overflow-hidden flex flex-col font-sans text-charcoal antialiased">
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none hidden">
+    <div id="toastInner" class="mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw]">
+      <span id="toastText"></span>
+    </div>
+  </div>
+
+  <!-- 顶部状态栏 -->
+  <header class="flex-none bg-white border-b border-borderLight px-4 py-3 flex items-center justify-between z-10">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-charcoal flex items-center justify-center text-white text-xs font-bold breathe">
+        AI
+      </div>
+      <div class="flex flex-col">
+        <span class="text-sm font-semibold text-charcoal leading-tight">AI 虚拟员工</span>
+        <span id="quotaStatus" class="text-[11px] text-warmGold leading-tight mt-0.5">加载中...</span>
+      </div>
+    </div>
+    <div id="membershipBadge" class="hidden px-2.5 py-1 rounded-full bg-warmGold/10 border border-warmGold/20 text-warmGold text-[11px] font-semibold">
+      会员
+    </div>
+  </header>
+
+  <!-- 聊天区域 -->
+  <main id="chatArea" class="flex-1 overflow-y-auto no-scrollbar px-4 py-4 scroll-smooth">
+    <!-- 空状态 -->
+    <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center px-6">
+      <div class="w-16 h-16 rounded-full bg-charcoal flex items-center justify-center text-white text-xl font-bold mb-5 breathe">
+        AI
+      </div>
+      <h2 class="text-lg font-semibold text-charcoal mb-2">有什么可以帮您？</h2>
+      <p class="text-sm text-messageGray/60 mb-8 leading-relaxed">
+        您的智能助手，随时待命<br>新用户赠送 3 次免费对话
+      </p>
+      <div class="flex flex-wrap gap-2.5 justify-center w-full max-w-sm">
+        <button onclick="sendQuick('帮我写一份周报')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+          帮我写一份周报
+        </button>
+        <button onclick="sendQuick('翻译这段话成英文')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+          翻译这段话成英文
+        </button>
+        <button onclick="sendQuick('帮我构思一个产品方案')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+          帮我构思一个产品方案
+        </button>
+        <button onclick="sendQuick('解释这个代码的意思')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+          解释这个代码的意思
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息列表 -->
+    <div id="messages" class="flex flex-col gap-3 hidden"></div>
+
+    <!-- 加载动画 -->
+    <div id="loading" class="hidden self-start mt-2">
+      <div class="bg-white border border-borderLight rounded-2xl px-4 py-3 inline-flex items-center gap-2 shadow-sm">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部输入区 -->
+  <footer id="inputFooter" class="flex-none bg-inputBg px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+    <div class="flex items-end gap-2 max-w-2xl mx-auto">
+      <div class="flex-1 relative">
+        <textarea
+          id="messageInput"
+          rows="1"
+          maxlength="2000"
+          placeholder="输入消息..."
+          class="w-full bg-white rounded-full px-4 py-2.5 pr-12 text-sm text-charcoal placeholder:text-messageGray/35 border border-borderLight focus:outline-none focus:border-warmGold/50 resize-none overflow-hidden leading-relaxed"
+          style="min-height: 42px; max-height: 120px;"
+        ></textarea>
+        <span id="charCount" class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-messageGray/30 pointer-events-none">0/2000</span>
+      </div>
+      <button
+        id="sendBtn"
+        onclick="sendMessage()"
+        class="w-[42px] h-[42px] rounded-full bg-charcoal flex items-center justify-center flex-none transition-transform active:scale-90 disabled:opacity-40 disabled:active:scale-100"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 购买面板遮罩 -->
+  <div id="payOverlay" class="fixed inset-0 bg-black/40 z-40 hidden flex items-end" onclick="closePayPanel(event)">
+    <!-- 购买面板 -->
+    <div id="payPanel" class="w-full bg-white rounded-t-[24px] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl" onclick="event.stopPropagation()">
+      <div class="w-10 h-1 bg-charcoal/10 rounded-full mx-auto mb-6"></div>
+      <h3 class="text-lg font-bold text-charcoal text-center mb-1">升级会员</h3>
+      <p class="text-sm text-messageGray/50 text-center mb-6">免费次数已用完，升级会员无限畅聊</p>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <!-- 日卡 -->
+        <label class="relative cursor-pointer group">
+          <input type="radio" name="plan" value="day" class="peer sr-only" checked>
+          <div class="border-2 border-borderLight rounded-2xl p-4 text-center transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold/5 hover:border-warmGold/30">
+            <div class="text-2xl font-bold text-charcoal mb-1">
+              <span class="text-sm font-normal text-messageGray/50">¥</span>9.9
+            </div>
+            <div class="text-xs text-messageGray/60 mb-2">日卡会员</div>
+            <div class="text-[11px] text-warmGold font-medium">24小时无限对话</div>
+          </div>
+          <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-warmGold rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+        </label>
+
+        <!-- 月卡 -->
+        <label class="relative cursor-pointer group">
+          <input type="radio" name="plan" value="month" class="peer sr-only">
+          <div class="border-2 border-borderLight rounded-2xl p-4 text-center transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold/5 hover:border-warmGold/30">
+            <div class="text-2xl font-bold text-charcoal mb-1">
+              <span class="text-sm font-normal text-messageGray/50">¥</span>29.9
+            </div>
+            <div class="text-xs text-messageGray/60 mb-2">月卡会员</div>
+            <div class="text-[11px] text-warmGold font-medium">30天无限对话</div>
+          </div>
+          <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-warmGold rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+        </label>
+      </div>
+
+      <button onclick="buyPlan()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98]">
+        立即购买
+      </button>
+      <button onclick="hidePayPanel()" class="w-full py-3 text-messageGray/40 text-xs mt-1">
+        稍后再说
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ===================== 配置 =====================
+    const API_BASE = 'https://bdpfqksdrtybxxmtgofs.supabase.co/functions/v1';
+    const USER_ID_KEY = 'ai_worker_user_id';
+    const STORAGE_KEY = 'ai_worker_messages';
+
+    // ===================== DOM 引用 =====================
+    const chatArea = document.getElementById('chatArea');
+    const messagesEl = document.getElementById('messages');
+    const emptyState = document.getElementById('emptyState');
+    const loadingEl = document.getElementById('loading');
+    const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const charCount = document.getElementById('charCount');
+    const quotaStatus = document.getElementById('quotaStatus');
+    const membershipBadge = document.getElementById('membershipBadge');
+    const toast = document.getElementById('toast');
+    const toastInner = document.getElementById('toastInner');
+    const toastText = document.getElementById('toastText');
+    const payOverlay = document.getElementById('payOverlay');
+    const payPanel = document.getElementById('payPanel');
+    const inputFooter = document.getElementById('inputFooter');
+
+    // ===================== 工具函数 =====================
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    function getUserId() {
+      let uid = localStorage.getItem(USER_ID_KEY);
+      if (!uid) {
+        uid = generateUUID();
+        localStorage.setItem(USER_ID_KEY, uid);
+      }
+      return uid;
+    }
+
+    function showToast(msg, type = 'error') {
+      toastText.textContent = msg;
+      toastInner.className = `mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw] toast-in ${
+        type === 'error' ? 'bg-red-500/90' : type === 'success' ? 'bg-green-500/90' : 'bg-charcoal/85'
+      }`;
+      toast.classList.remove('hidden');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toastInner.classList.remove('toast-in');
+        toastInner.classList.add('toast-out');
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 2000);
+    }
+
+    function autoResizeTextarea() {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    }
+
+    function scrollToBottom() {
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    // ===================== 消息渲染 =====================
+    function renderMessage(content, isUser) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex w-full msg-appear ${isUser ? 'justify-end' : 'justify-start'}`;
+
+      if (isUser) {
+        wrapper.innerHTML = `
+          <div class="max-w-[82%] bg-charcoal text-cream rounded-2xl rounded-tr-md px-4 py-2.5 text-[15px] leading-relaxed shadow-sm whitespace-pre-wrap break-words">
+            ${escapeHtml(content)}
+          </div>
+        `;
+      } else {
+        wrapper.innerHTML = `
+          <div class="max-w-[82%] bg-white text-messageGray border border-borderLight rounded-2xl rounded-tl-md px-4 py-2.5 text-[15px] leading-relaxed shadow-sm whitespace-pre-wrap break-words">
+            ${escapeHtml(content)}
+          </div>
+        `;
+      }
+
+      messagesEl.appendChild(wrapper);
+      scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function setLoading(show) {
+      loadingEl.classList.toggle('hidden', !show);
+      if (show) {
+        messagesEl.appendChild(loadingEl);
+        scrollToBottom();
+      }
+      sendBtn.disabled = show;
+    }
+
+    function showMessages() {
+      emptyState.classList.add('hidden');
+      messagesEl.classList.remove('hidden');
+    }
+
+    // ===================== 配额状态 =====================
+    async function fetchQuota() {
+      try {
+        const res = await fetch(`${API_BASE}/get-user-quota`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: getUserId() }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '获取配额失败');
+        updateQuotaUI(data);
+        return data;
+      } catch (err) {
+        quotaStatus.textContent = '获取额度失败';
+        return null;
+      }
+    }
+
+    function updateQuotaUI(data) {
+      if (!data) return;
+      if (data.is_member) {
+        membershipBadge.classList.remove('hidden');
+        quotaStatus.textContent = `会员有效 · 今日 ${data.daily_used}/${data.daily_limit}`;
+      } else {
+        membershipBadge.classList.add('hidden');
+        const remaining = data.remaining ?? 0;
+        quotaStatus.textContent = `剩余 ${remaining} 次 · 今日 ${data.daily_used}/${data.daily_limit}`;
+      }
+    }
+
+    // ===================== 发送消息 =====================
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      if (text.length > 2000) {
+        showToast('输入超过 2000 字限制');
+        return;
+      }
+
+      showMessages();
+      renderMessage(text, true);
+      inputEl.value = '';
+      autoResizeTextarea();
+      charCount.textContent = '0/2000';
+      setLoading(true);
+
+      try {
+        const res = await fetch(`${API_BASE}/chat-with-bot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: getUserId(), message: text }),
+        });
+
+        const data = await res.json();
+
+        if (res.status === 403) {
+          setLoading(false);
+          showPayPanel();
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || `请求失败 (${res.status})`);
+        }
+
+        renderMessage(data.reply, false);
+        updateQuotaUI(data);
+      } catch (err) {
+        showToast(err.message || '网络异常，请重试');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function sendQuick(text) {
+      inputEl.value = text;
+      autoResizeTextarea();
+      charCount.textContent = text.length + '/2000';
+      sendMessage();
+    }
+
+    // ===================== 购买面板 =====================
+    function showPayPanel() {
+      payOverlay.classList.remove('hidden');
+      payOverlay.classList.add('overlay-in');
+      payPanel.classList.add('panel-in');
+      inputFooter.style.pointerEvents = 'none';
+    }
+
+    function hidePayPanel() {
+      payPanel.classList.remove('panel-in');
+      payOverlay.classList.remove('overlay-in');
+      payOverlay.classList.add('hidden');
+      inputFooter.style.pointerEvents = '';
+    }
+
+    function closePayPanel(e) {
+      if (e.target === payOverlay) hidePayPanel();
+    }
+
+    async function buyPlan() {
+      const plan = document.querySelector('input[name="plan"]:checked')?.value || 'day';
+      const price = plan === 'day' ? '9.9' : '29.9';
+      showToast(`正在唤起支付: ¥${price}`, 'info');
+      hidePayPanel();
+      // TODO: 接入实际支付流程
+    }
+
+    // ===================== 事件绑定 =====================
+    inputEl.addEventListener('input', () => {
+      autoResizeTextarea();
+      charCount.textContent = inputEl.value.length + '/2000';
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ===================== 初始化 =====================
+    (async function init() {
+      getUserId();
+      await fetchQuota();
+      inputEl.focus();
+    })();
+  </script>
+</body>
+</html>
