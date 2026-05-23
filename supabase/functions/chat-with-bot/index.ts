@@ -130,7 +130,7 @@ async function callCozeBot(
   message: string
 ): Promise<string> {
   console.log("Calling Coze v2 API with bot_id:", COZE_BOT_ID, "user_id:", userId);
-  
+
   const resp = await fetch("https://api.coze.cn/open_api/v2/chat", {
     method: "POST",
     headers: {
@@ -245,9 +245,27 @@ async function checkRiskControl(quota: any, message: string): Promise<{ ok: bool
     quota.daily_reset_date = today;
   }
 
-  // d. 单日上限（500 次）
-  if (quota.daily_used >= 500) {
-    return { ok: false, status: 429, error: "今日额度已用完" };
+  // d. 会员判断：总次数用完 或 到期
+  if (quota.membership !== "free") {
+    // 检查是否过期
+    if (quota.expires_at && new Date(quota.expires_at) < new Date()) {
+      return { ok: false, status: 403, error: "会员已过期，请续费" };
+    }
+    // 检查总次数是否用完
+    const myPlan = await supabaseAdmin
+      .from("pricing_plans")
+      .select("total_limit")
+      .eq("plan", quota.membership)
+      .single();
+    const totalLimit = myPlan.data?.total_limit || 999999;
+    if ((quota.total_used || 0) >= totalLimit) {
+      return { ok: false, status: 429, error: "会员次数已用完，请续费" };
+    }
+  } else {
+    // 免费用户保持原逻辑：单日上限 3 次（通过 remaining 控制）
+    if (quota.remaining <= 0) {
+      return { ok: false, status: 403, error: "次数不足，请购买会员" };
+    }
   }
 
   // e. 免费次数检查
@@ -285,6 +303,7 @@ async function updateQuotaAndLog(
   // 构建更新对象
   const updates: any = {
     daily_used: quota.daily_used + 1,
+    total_used: (quota.total_used || 0) + 1,  // 新增：累计次数+1
     last_request_at: new Date().toISOString(),
   };
 
@@ -328,6 +347,7 @@ async function updateQuotaAndLog(
   return {
     remaining: updates.remaining ?? quota.remaining,
     daily_used: updates.daily_used,
+    total_used: updates.total_used,  // 新增
     membership: quota.membership,
   };
 }
@@ -405,7 +425,9 @@ Deno.serve(async (req: Request) => {
         remaining: updatedQuota.remaining,
         membership: updatedQuota.membership,
         daily_used: updatedQuota.daily_used,
+        total_used: updatedQuota.total_used,  // 用 updatedQuota 里的
         daily_limit: dailyLimit,
+        expires_at: quota.expires_at,    // 新增
         plans: plans || [],
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
