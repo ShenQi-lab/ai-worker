@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -24,67 +25,151 @@
   </script>
   <style>
     /* 隐藏滚动条 */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
 
     /* 打字机动画 */
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    .msg-appear { animation: fadeInUp 0.3s ease-out forwards; }
+
+    .msg-appear {
+      animation: fadeInUp 0.3s ease-out forwards;
+    }
 
     /* 加载动画 - 三个圆点脉冲 */
     @keyframes pulseDot {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-      40% { transform: scale(1); opacity: 1; }
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+      }
+
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
+
     .dot {
-      width: 8px; height: 8px;
+      width: 8px;
+      height: 8px;
       background: #C9A96E;
       border-radius: 50%;
       animation: pulseDot 1.4s infinite ease-in-out both;
     }
-    .dot:nth-child(1) { animation-delay: -0.32s; }
-    .dot:nth-child(2) { animation-delay: -0.16s; }
+
+    .dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
 
     /* Toast 滑入 */
     @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
+
     @keyframes slideUp {
-      from { transform: translateY(0); opacity: 1; }
-      to { transform: translateY(-100%); opacity: 0; }
+      from {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      to {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
     }
-    .toast-in { animation: slideDown 0.3s ease-out forwards; }
-    .toast-out { animation: slideUp 0.3s ease-in forwards; }
+
+    .toast-in {
+      animation: slideDown 0.3s ease-out forwards;
+    }
+
+    .toast-out {
+      animation: slideUp 0.3s ease-in forwards;
+    }
 
     /* 底部面板滑入 */
     @keyframes slideUpPanel {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      from {
+        transform: translateY(100%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
     }
+
     @keyframes fadeInOverlay {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
-    .panel-in { animation: slideUpPanel 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .overlay-in { animation: fadeInOverlay 0.25s ease-out forwards; }
+
+    .panel-in {
+      animation: slideUpPanel 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .overlay-in {
+      animation: fadeInOverlay 0.25s ease-out forwards;
+    }
 
     /* 呼吸光环 */
     @keyframes breathe {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(201, 169, 110, 0.3); }
-      50% { box-shadow: 0 0 0 8px rgba(201, 169, 110, 0); }
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(201, 169, 110, 0.3);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(201, 169, 110, 0);
+      }
     }
-    .breathe { animation: breathe 2s ease-in-out infinite; }
+
+    .breathe {
+      animation: breathe 2s ease-in-out infinite;
+    }
   </style>
 </head>
+
 <body class="bg-cream h-screen w-full overflow-hidden flex flex-col font-sans text-charcoal antialiased">
 
   <!-- Toast 提示 -->
   <div id="toast" class="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none hidden">
-    <div id="toastInner" class="mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw]">
+    <div id="toastInner"
+      class="mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw]">
       <span id="toastText"></span>
     </div>
   </div>
@@ -92,7 +177,8 @@
   <!-- 顶部状态栏 -->
   <header class="flex-none bg-white border-b border-borderLight px-4 py-3 flex items-center justify-between z-10">
     <div class="flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-full bg-charcoal flex items-center justify-center text-white text-xs font-bold breathe">
+      <div
+        class="w-8 h-8 rounded-full bg-charcoal flex items-center justify-center text-white text-xs font-bold breathe">
         AI
       </div>
       <div class="flex flex-col">
@@ -100,7 +186,8 @@
         <span id="quotaStatus" class="text-[11px] text-warmGold leading-tight mt-0.5">加载中...</span>
       </div>
     </div>
-    <div id="membershipBadge" class="hidden px-2.5 py-1 rounded-full bg-warmGold/10 border border-warmGold/20 text-warmGold text-[11px] font-semibold">
+    <div id="membershipBadge"
+      class="hidden px-2.5 py-1 rounded-full bg-warmGold/10 border border-warmGold/20 text-warmGold text-[11px] font-semibold">
       会员
     </div>
   </header>
@@ -109,7 +196,8 @@
   <main id="chatArea" class="flex-1 overflow-y-auto no-scrollbar px-4 py-4 scroll-smooth">
     <!-- 空状态 -->
     <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center px-6">
-      <div class="w-16 h-16 rounded-full bg-charcoal flex items-center justify-center text-white text-xl font-bold mb-5 breathe">
+      <div
+        class="w-16 h-16 rounded-full bg-charcoal flex items-center justify-center text-white text-xl font-bold mb-5 breathe">
         AI
       </div>
       <h2 class="text-lg font-semibold text-charcoal mb-2">有什么可以帮您？</h2>
@@ -117,16 +205,20 @@
         您的智能助手，随时待命<br>新用户赠送 3 次免费对话
       </p>
       <div class="flex flex-wrap gap-2.5 justify-center w-full max-w-sm">
-        <button onclick="sendQuick('帮我写一份周报')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+        <button onclick="sendQuick('帮我写一份周报')"
+          class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
           帮我写一份周报
         </button>
-        <button onclick="sendQuick('翻译这段话成英文')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+        <button onclick="sendQuick('翻译这段话成英文')"
+          class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
           翻译这段话成英文
         </button>
-        <button onclick="sendQuick('帮我构思一个产品方案')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+        <button onclick="sendQuick('帮我构思一个产品方案')"
+          class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
           帮我构思一个产品方案
         </button>
-        <button onclick="sendQuick('解释这个代码的意思')" class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
+        <button onclick="sendQuick('解释这个代码的意思')"
+          class="px-4 py-2.5 bg-white border border-borderLight rounded-2xl text-sm text-messageGray hover:border-warmGold/40 hover:bg-warmGold/5 transition-colors duration-200 shadow-sm">
           解释这个代码的意思
         </button>
       </div>
@@ -149,22 +241,16 @@
   <footer id="inputFooter" class="flex-none bg-inputBg px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
     <div class="flex items-end gap-2 max-w-2xl mx-auto">
       <div class="flex-1 relative">
-        <textarea
-          id="messageInput"
-          rows="1"
-          maxlength="2000"
-          placeholder="输入消息..."
+        <textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息..."
           class="w-full bg-white rounded-full px-4 py-2.5 pr-12 text-sm text-charcoal placeholder:text-messageGray/35 border border-borderLight focus:outline-none focus:border-warmGold/50 resize-none overflow-hidden leading-relaxed"
-          style="min-height: 42px; max-height: 120px;"
-        ></textarea>
-        <span id="charCount" class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-messageGray/30 pointer-events-none">0/2000</span>
+          style="min-height: 42px; max-height: 120px;"></textarea>
+        <span id="charCount"
+          class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-messageGray/30 pointer-events-none">0/2000</span>
       </div>
-      <button
-        id="sendBtn"
-        onclick="sendMessage()"
-        class="w-[42px] h-[42px] rounded-full bg-charcoal flex items-center justify-center flex-none transition-transform active:scale-90 disabled:opacity-40 disabled:active:scale-100"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <button id="sendBtn" onclick="sendMessage()"
+        class="w-[42px] h-[42px] rounded-full bg-charcoal flex items-center justify-center flex-none transition-transform active:scale-90 disabled:opacity-40 disabled:active:scale-100">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
         </svg>
@@ -175,7 +261,9 @@
   <!-- 购买面板遮罩 -->
   <div id="payOverlay" class="fixed inset-0 bg-black/40 z-40 hidden flex items-end" onclick="closePayPanel(event)">
     <!-- 购买面板 -->
-    <div id="payPanel" class="w-full bg-white rounded-t-[24px] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl" onclick="event.stopPropagation()">
+    <div id="payPanel"
+      class="w-full bg-white rounded-t-[24px] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl"
+      onclick="event.stopPropagation()">
       <div class="w-10 h-1 bg-charcoal/10 rounded-full mx-auto mb-6"></div>
       <h3 class="text-lg font-bold text-charcoal text-center mb-1">升级会员</h3>
       <p class="text-sm text-messageGray/50 text-center mb-6">免费次数已用完，选择适合您的套餐</p>
@@ -183,7 +271,8 @@
       <!-- 动态套餐列表 -->
       <div id="plansList" class="flex flex-col gap-3 mb-6"></div>
 
-      <button id="confirmBuyBtn" onclick="buyPlan()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98]">
+      <button id="confirmBuyBtn" onclick="buyPlan()"
+        class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98]">
         立即购买
       </button>
       <button onclick="hidePayPanel()" class="w-full py-3 text-messageGray/40 text-xs mt-1">
@@ -193,12 +282,17 @@
   </div>
 
   <!-- 微信收款码支付弹窗 -->
-  <div id="qrOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center px-4" onclick="hideQrPanel(event)">
-    <div id="qrPanel" class="bg-white rounded-[24px] p-6 w-full max-w-[360px] shadow-2xl text-center" onclick="event.stopPropagation()">
+  <div id="qrOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center px-4"
+    onclick="hideQrPanel(event)">
+    <div id="qrPanel" class="bg-white rounded-[24px] p-6 w-full max-w-[360px] shadow-2xl text-center"
+      onclick="event.stopPropagation()">
       <h3 class="text-lg font-bold text-charcoal mb-5">微信扫码支付</h3>
 
-      <img id="qrImage" src="wechat-qr.jpg" alt="微信收款码" class="w-[250px] h-auto mx-auto rounded-xl mb-5 border border-borderLight" onerror="this.style.display='none';document.getElementById('qrFallback').classList.remove('hidden');">
-      <div id="qrFallback" class="hidden w-[250px] h-[250px] mx-auto rounded-xl bg-inputBg border border-borderLight flex items-center justify-center mb-5">
+      <img id="qrImage" src="wechat-qr.jpg" alt="微信收款码"
+        class="w-[250px] h-auto mx-auto rounded-xl mb-5 border border-borderLight"
+        onerror="this.style.display='none';document.getElementById('qrFallback').classList.remove('hidden');">
+      <div id="qrFallback"
+        class="hidden w-[250px] h-[250px] mx-auto rounded-xl bg-inputBg border border-borderLight flex items-center justify-center mb-5">
         <span class="text-sm text-messageGray/40">请放置 wechat-qr.jpg</span>
       </div>
 
@@ -216,7 +310,8 @@
         转账后联系客服开通，一般5分钟内生效
       </p>
 
-      <button onclick="confirmTransferred()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98] mb-2">
+      <button onclick="confirmTransferred()"
+        class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98] mb-2">
         我已转账
       </button>
       <button onclick="hideQrPanel()" class="w-full py-3 text-messageGray/40 text-xs">
@@ -277,9 +372,8 @@
 
     function showToast(msg, type = 'error') {
       toastText.textContent = msg;
-      toastInner.className = `mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw] toast-in ${
-        type === 'error' ? 'bg-red-500/90' : type === 'success' ? 'bg-green-500/90' : 'bg-charcoal/85'
-      }`;
+      toastInner.className = `mt-4 px-5 py-2.5 rounded-full text-sm text-white shadow-lg pointer-events-auto max-w-[90vw] toast-in ${type === 'error' ? 'bg-red-500/90' : type === 'success' ? 'bg-green-500/90' : 'bg-charcoal/85'
+        }`;
       toast.classList.remove('hidden');
       clearTimeout(toast._timer);
       toast._timer = setTimeout(() => {
@@ -427,7 +521,7 @@
 
       const membership = data.membership || 'free';
       const dailyUsed = data.daily_used ?? 0;
-      const dailyLimit = data.daily_limit ?? 0;
+      const dailyLimit = data.daily_limit ?? 3;
       const remaining = data.remaining ?? 0;
 
       // 找到当前套餐的 total_limit（用于 weekly 显示剩余/总量）
@@ -589,4 +683,5 @@
     })();
   </script>
 </body>
+
 </html>

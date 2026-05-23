@@ -344,14 +344,24 @@ Deno.serve(async (req: Request) => {
     // 5. 更新配额与记录日志
     const updatedQuota = await updateQuotaAndLog(user_id, message, botReply, quota);
 
-    // 6. 返回结果
+    // 6. 查询定价套餐，获取正确的 daily_limit
+    const { data: plans } = await supabaseAdmin
+      .from("pricing_plans")
+      .select("*")
+      .order("price", { ascending: true });
+
+    const plan = plans?.find(p => p.plan === updatedQuota.membership);
+    const dailyLimit = plan?.daily_limit || 3;
+
+    // 7. 返回结果
     return new Response(
       JSON.stringify({
         reply: botReply,
         remaining: updatedQuota.remaining,
         membership: updatedQuota.membership,
         daily_used: updatedQuota.daily_used,
-        daily_limit: 500,
+        daily_limit: dailyLimit,
+        plans: plans || [],
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
