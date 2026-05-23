@@ -186,8 +186,7 @@
         <span id="quotaStatus" class="text-[11px] text-warmGold leading-tight mt-0.5">加载中...</span>
       </div>
     </div>
-    <div id="membershipBadge"
-      class="hidden px-2.5 py-1 rounded-full bg-[#C9A96E] text-white text-[11px] font-semibold">
+    <div id="membershipBadge" class="hidden px-2.5 py-1 rounded-full bg-[#C9A96E] text-white text-[11px] font-semibold">
       会员
     </div>
   </header>
@@ -212,8 +211,11 @@
     <!-- 加载动画 -->
     <div id="loading" class="hidden self-start mt-2">
       <div class="flex items-start gap-2">
-        <div class="w-7 h-7 rounded-full bg-[#C9A96E] flex items-center justify-center text-white text-[10px] font-bold flex-none">AI</div>
-        <div class="bg-[#FFFBF0] border border-[#F0E6D3] rounded-xl rounded-tl-sm px-3.5 py-2.5 inline-flex items-center gap-1.5 shadow-sm">
+        <div
+          class="w-7 h-7 rounded-full bg-[#C9A96E] flex items-center justify-center text-white text-[10px] font-bold flex-none">
+          AI</div>
+        <div
+          class="bg-[#FFFBF0] border border-[#F0E6D3] rounded-xl rounded-tl-sm px-3.5 py-2.5 inline-flex items-center gap-1.5 shadow-sm">
           <div class="dot"></div>
           <div class="dot"></div>
           <div class="dot"></div>
@@ -474,19 +476,19 @@
 
       if (isUser) {
         wrapper.innerHTML = `
-          <div class="max-w-[75%] bg-[#2D3748] text-[#FFFBF0] px-[14px] py-[10px] text-sm leading-[1.4] shadow-sm whitespace-pre-wrap break-words" style="border-radius: 12px 12px 12px 4px;">
-            ${escapeHtml(content)}
-          </div>
-        `;
+      <div style="max-width:75%; background:#2D3748; color:#FFFBF0; padding:10px 14px; font-size:14px; line-height:1.4; border-radius:12px 12px 12px 4px; box-shadow:0 1px 2px rgba(0,0,0,0.05); white-space:pre-wrap; word-break:break-word;">
+        ${escapeHtml(content)}
+      </div>
+    `;
       } else {
         wrapper.innerHTML = `
-          <div class="flex items-start gap-2 max-w-[75%]">
-            <div class="w-7 h-7 rounded-full bg-[#C9A96E] flex items-center justify-center text-white text-[10px] font-bold flex-none mt-0.5">AI</div>
-            <div class="bg-[#FFFBF0] text-[#4A4A4A] border border-[#F0E6D3] px-[14px] py-[10px] text-sm leading-[1.4] shadow-sm whitespace-pre-wrap break-words" style="border-radius: 12px 12px 4px 12px;">
-              ${escapeHtml(content)}
-            </div>
-          </div>
-        `;
+      <div style="display:flex; align-items:flex-start; gap:8px; max-width:75%;">
+        <div style="width:28px; height:28px; border-radius:50%; background:#C9A96E; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:bold; flex-shrink:0; margin-top:2px;">AI</div>
+        <div style="background:#FFFBF0; color:#4A4A4A; border:1px solid #F0E6D3; padding:10px 14px; font-size:14px; line-height:1.4; border-radius:12px 12px 4px 12px; box-shadow:0 1px 2px rgba(0,0,0,0.05); white-space:pre-wrap; word-break:break-word;">
+          ${escapeHtml(content)}
+        </div>
+      </div>
+    `;
       }
 
       messagesEl.appendChild(wrapper);
@@ -622,7 +624,7 @@
         setLoading(false);
       }
     }
-    
+
 
     function sendQuick(text) {
       inputEl.value = text;
