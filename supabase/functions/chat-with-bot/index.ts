@@ -237,35 +237,93 @@ async function checkRiskControl(quota: any, message: string): Promise<{ ok: bool
     }
   }
 
-  // c. 跨天重置
+  // c. 跨天处理（日卡重置，周卡/月卡不清零）
   const today = new Date().toISOString().split("T")[0];
   if (quota.daily_reset_date !== today) {
-    // 在内存中先更新，后续会写回数据库
-    quota.daily_used = 0;
+    if (quota.membership === 'daily') {
+      // 日卡：跨天重置 daily_used
+      quota.daily_used = 0;
+    }
+    // 周卡/月卡：daily_used 不清零，只更新日期标记
     quota.daily_reset_date = today;
   }
 
-  // d. 会员判断：总次数用完 或 到期
-  if (quota.membership !== "free") {
+  // ====== 日卡特殊处理 ======
+  if (quota.membership === 'daily') {
+    // 检查是否过期
+    if (quota.expires_at && new Date(quota.expires_at) < new Date()) {
+      // 日卡过期：自动降级为免费，恢复3次
+      // 这里不直接返回错误，而是更新数据库后重新判断
+      await supabaseAdmin
+        .from("user_quotas")
+        .update({
+          membership: 'free',
+          remaining: 3,
+          daily_used: 0,
+          expires_at: null,
+        })
+        .eq("user_id", quota.user_id);
+
+      // 重新查询获取更新后的配额
+      const { data: newQuota } = await supabaseAdmin
+        .from("user_quotas")
+        .select("*")
+        .eq("user_id", quota.user_id)
+        .single();
+
+      if (newQuota) {
+        Object.assign(quota, newQuota);
+      }
+
+      // 现在按免费用户判断
+      if (quota.remaining <= 0) {
+        return { ok: false, status: 403, error: "次数不足，请购买会员" };
+      }
+      return { ok: true, status: 200 };
+    }
+
+    // 日卡当日上限判断
+    const dailyLimit = quota.daily_limit || 50;
+    if (quota.daily_used >= dailyLimit) {
+      return { ok: false, status: 429, error: "今日额度已用完" };
+    }
+
+    return { ok: true, status: 200 };
+  }
+
+  // ====== 周卡/月卡：总次数判断 ======
+  if (quota.membership === 'weekly' || quota.membership === 'monthly') {
     // 检查是否过期
     if (quota.expires_at && new Date(quota.expires_at) < new Date()) {
       return { ok: false, status: 403, error: "会员已过期，请续费" };
     }
+
     // 检查总次数是否用完
-    const myPlan = await supabaseAdmin
+    const { data: planData } = await supabaseAdmin
       .from("pricing_plans")
       .select("total_limit")
       .eq("plan", quota.membership)
       .single();
-    const totalLimit = myPlan.data?.total_limit || 999999;
+    const totalLimit = planData?.total_limit || 999999;
+
     if ((quota.total_used || 0) >= totalLimit) {
       return { ok: false, status: 429, error: "会员次数已用完，请续费" };
     }
-  } else {
-    // 免费用户保持原逻辑：单日上限 3 次（通过 remaining 控制）
+
+    // 单日上限判断（防止一天刷完所有次数）
+    if (quota.daily_used >= 500) {
+      return { ok: false, status: 429, error: "今日额度已用完，明天继续" };
+    }
+
+    return { ok: true, status: 200 };
+  }
+
+  // ====== 免费用户 ======
+  if (quota.membership === 'free') {
     if (quota.remaining <= 0) {
       return { ok: false, status: 403, error: "次数不足，请购买会员" };
     }
+    return { ok: true, status: 200 };
   }
 
   // e. 免费次数检查
@@ -307,10 +365,15 @@ async function updateQuotaAndLog(
     last_request_at: new Date().toISOString(),
   };
 
-  // 如果是跨天重置的情况，也需要更新 daily_reset_date
+  // 跨天处理
   if (quota.daily_reset_date !== today) {
     updates.daily_reset_date = today;
-    updates.daily_used = 1; // 重置后从 1 开始计数
+
+    // 日卡：跨天重置 daily_used
+    if (quota.membership === 'daily') {
+      updates.daily_used = 1;  // 重置后从1开始
+    }
+    // 周卡/月卡：daily_used 不清零，继续叠加（上面已 +1）
   }
 
   // 免费用户消耗 remaining

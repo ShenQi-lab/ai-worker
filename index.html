@@ -602,14 +602,13 @@
       } else if (membership === 'weekly') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '周卡';
-        // 计算剩余天数
         const expiresAt = data.expires_at;
         const leftDays = expiresAt ? Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24))) : 0;
-        // 总使用次数 = daily_used（目前后端只记录了每日使用，需要后端增加 total_used 字段）
-        // 暂时用 daily_used 作为已用次数展示，等后端增加 total_used 后替换
-        const totalUsed = dailyUsed; // 临时：等后端加 total_used 后改
+        const totalUsed = data.total_used || dailyUsed;  // 优先用 total_used
         const totalLimit = myPlan?.total_limit || 500;
         quotaStatus.textContent = `周卡会员 · 已用${totalUsed}/${totalLimit}次 · 剩余${leftDays}天`;
+        welcomeTitle.textContent = '欢迎回来';
+        welcomeSubtitle.innerHTML = `您的周卡会员权益已激活<br>总剩余 ${Math.max(0, totalLimit - totalUsed)} 次 · 剩余${leftDays}天`;
         welcomeTitle.textContent = '欢迎回来';
         welcomeSubtitle.innerHTML = `您的周卡会员权益已激活<br>总剩余 ${Math.max(0, totalLimit - totalUsed)} 次 · 剩余${leftDays}天`;
       } else if (membership === 'monthly') {
@@ -617,7 +616,7 @@
         membershipBadge.textContent = '月卡';
         const expiresAt = data.expires_at;
         const leftDays = expiresAt ? Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24))) : 0;
-        const totalUsed = dailyUsed; // 临时：等后端加 total_used 后改
+        const totalUsed = data.total_used || dailyUsed;
         const totalLimit = myPlan?.total_limit || 2500;
         quotaStatus.textContent = `月卡会员 · 已用${totalUsed}/${totalLimit}次 · 剩余${leftDays}天`;
         welcomeTitle.textContent = '欢迎回来';
