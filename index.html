@@ -598,7 +598,7 @@
         const left = Math.max(0, dailyLimit - dailyUsed);
         quotaStatus.textContent = `日卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
         welcomeTitle.textContent = '欢迎回来';
-        welcomeSubtitle.innerHTML = `您的日卡会员权益已激活<br>剩余 ${left} 次对话额度`;
+        welcomeSubtitle.innerHTML = `您的日卡会员权益已激活<br>今日可用 ${left} 次`;
       } else if (membership === 'weekly') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '周卡';
@@ -606,14 +606,14 @@
         const remainText = totalLimit ? `${remaining}/${totalLimit}` : `${dailyUsed}/${dailyLimit}`;
         quotaStatus.textContent = `周卡会员 · 剩余${remainText}次`;
         welcomeTitle.textContent = '欢迎回来';
-        welcomeSubtitle.innerHTML = `您的周卡会员权益已激活<br>剩余 ${left} 次对话额度`;
+        welcomeSubtitle.innerHTML = `您的周卡会员权益已激活<br>今日可用 ${left} 次`;
       } else if (membership === 'monthly') {
         membershipBadge.classList.remove('hidden');
         membershipBadge.textContent = '月卡';
         const left = Math.max(0, dailyLimit - dailyUsed);
         quotaStatus.textContent = `月卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
         welcomeTitle.textContent = '欢迎回来';
-        welcomeSubtitle.innerHTML = `您的月卡会员权益已激活<br>剩余 ${left} 次对话额度`;
+        welcomeSubtitle.innerHTML = `您的月卡会员权益已激活<br>今日可用 ${left} 次`;
       } else {
         membershipBadge.classList.add('hidden');
         quotaStatus.textContent = `剩余${remaining}次`;
