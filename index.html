@@ -162,13 +162,15 @@
       animation: breathe 2s ease-in-out infinite;
     }
 
-    /* ===================== 强制消息气泡样式（覆盖 Tailwind） ===================== */
-    #messages>div>div {
+    /* ===================== 强制消息气泡样式（精确选择器） ===================== */
+
+    /* 只针对 renderMessage 生成的消息行 */
+    .msg-appear>div {
       max-width: 70% !important;
     }
 
     /* 用户消息气泡 */
-    #messages>div.justify-end>div>div {
+    .msg-appear.justify-end>div {
       background: #2D3748 !important;
       color: #FFFBF0 !important;
       padding: 8px 12px !important;
@@ -181,7 +183,7 @@
     }
 
     /* AI 消息外层容器 */
-    #messages>div.justify-start>div {
+    .msg-appear.justify-start>div {
       display: flex !important;
       align-items: flex-start !important;
       gap: 6px !important;
@@ -189,7 +191,7 @@
     }
 
     /* AI 头像 */
-    #messages>div.justify-start>div>div:first-child {
+    .msg-appear.justify-start>div>div:first-child {
       width: 24px !important;
       height: 24px !important;
       border-radius: 50% !important;
@@ -205,7 +207,7 @@
     }
 
     /* AI 消息气泡 */
-    #messages>div.justify-start>div>div:last-child {
+    .msg-appear.justify-start>div>div:last-child {
       background: #FFFBF0 !important;
       color: #4A4A4A !important;
       border: 1px solid #F0E6D3 !important;
@@ -531,18 +533,9 @@
       wrapper.className = `flex w-full msg-appear mb-2 ${isUser ? 'justify-end' : 'justify-start'}`;
 
       if (isUser) {
-        wrapper.innerHTML = `
-      <div>
-        ${escapeHtml(content)}
-      </div>
-    `;
+        wrapper.innerHTML = `<div>${escapeHtml(content)}</div>`;
       } else {
-        wrapper.innerHTML = `
-      <div>
-        <div>AI</div>
-        <div>${escapeHtml(content)}</div>
-      </div>
-    `;
+        wrapper.innerHTML = `<div><div>AI</div><div>${escapeHtml(content)}</div></div>`;
       }
 
       messagesEl.appendChild(wrapper);
