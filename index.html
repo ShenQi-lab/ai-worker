@@ -161,6 +161,62 @@
     .breathe {
       animation: breathe 2s ease-in-out infinite;
     }
+
+    /* ===================== 强制消息气泡样式（覆盖 Tailwind） ===================== */
+    #messages>div>div {
+      max-width: 70% !important;
+    }
+
+    /* 用户消息气泡 */
+    #messages>div.justify-end>div>div {
+      background: #2D3748 !important;
+      color: #FFFBF0 !important;
+      padding: 8px 12px !important;
+      font-size: 13px !important;
+      line-height: 1.35 !important;
+      border-radius: 10px 10px 10px 3px !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+    }
+
+    /* AI 消息外层容器 */
+    #messages>div.justify-start>div {
+      display: flex !important;
+      align-items: flex-start !important;
+      gap: 6px !important;
+      max-width: 70% !important;
+    }
+
+    /* AI 头像 */
+    #messages>div.justify-start>div>div:first-child {
+      width: 24px !important;
+      height: 24px !important;
+      border-radius: 50% !important;
+      background: #C9A96E !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: white !important;
+      font-size: 9px !important;
+      font-weight: bold !important;
+      flex-shrink: 0 !important;
+      margin-top: 1px !important;
+    }
+
+    /* AI 消息气泡 */
+    #messages>div.justify-start>div>div:last-child {
+      background: #FFFBF0 !important;
+      color: #4A4A4A !important;
+      border: 1px solid #F0E6D3 !important;
+      padding: 8px 12px !important;
+      font-size: 13px !important;
+      line-height: 1.35 !important;
+      border-radius: 10px 10px 3px 10px !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+    }
   </style>
 </head>
 
@@ -476,17 +532,15 @@
 
       if (isUser) {
         wrapper.innerHTML = `
-      <div style="max-width:70% !important; background:#2D3748 !important; color:#FFFBF0 !important; padding:8px 12px !important; font-size:13px !important; line-height:1.35 !important; border-radius:10px 10px 10px 3px !important; box-shadow:0 1px 2px rgba(0,0,0,0.05) !important; white-space:pre-wrap !important; word-break:break-word !important; border:3px solid red !important;">
+      <div>
         ${escapeHtml(content)}
       </div>
     `;
       } else {
         wrapper.innerHTML = `
-      <div style="display:flex !important; align-items:flex-start !important; gap:6px !important; max-width:70% !important;">
-        <div style="width:24px !important; height:24px !important; border-radius:50% !important; background:#C9A96E !important; display:flex !important; align-items:center !important; justify-content:center !important; color:white !important; font-size:9px !important; font-weight:bold !important; flex-shrink:0 !important; margin-top:1px !important;">AI</div>
-        <div style="background:#FFFBF0 !important; color:#4A4A4A !important; border:3px solid red !important; padding:8px 12px !important; font-size:13px !important; line-height:1.35 !important; border-radius:10px 10px 3px 10px !important; box-shadow:0 1px 2px rgba(0,0,0,0.05) !important; white-space:pre-wrap !important; word-break:break-word !important;">
-          ${escapeHtml(content)}
-        </div>
+      <div>
+        <div>AI</div>
+        <div>${escapeHtml(content)}</div>
       </div>
     `;
       }
