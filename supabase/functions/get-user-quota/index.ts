@@ -1,4 +1,4 @@
-// Supabase Edge Function: 查询用户配额
+// Supabase Edge Function: 查询用户配额 + 套餐列表
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0?target=deno";
 
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
       throw error;
     }
 
-    // 跨天重置检查（返回前做实时计算，但不写入数据库）
+    // 跨天重置检查
     const today = new Date().toISOString().split("T")[0];
     let dailyUsed = quota.daily_used;
     if (quota.daily_reset_date !== today) {
@@ -77,6 +77,21 @@ Deno.serve(async (req: Request) => {
       quota.expires_at &&
       new Date(quota.expires_at) > new Date();
 
+    // 查询定价套餐
+    const { data: plans, error: plansError } = await supabaseAdmin
+      .from("pricing_plans")
+      .select("*")
+      .order("price", { ascending: true });
+
+    if (plansError) throw plansError;
+
+    // 根据会员类型返回对应的 daily_limit
+    let dailyLimit = 3; // 免费用户
+    if (isMember) {
+      const plan = plans?.find(p => p.plan === quota.membership);
+      dailyLimit = plan?.daily_limit || 500;
+    }
+
     return new Response(
       JSON.stringify({
         remaining: quota.remaining,
@@ -84,7 +99,8 @@ Deno.serve(async (req: Request) => {
         expires_at: quota.expires_at,
         is_member: isMember,
         daily_used: dailyUsed,
-        daily_limit: 500,
+        daily_limit: dailyLimit,
+        plans: plans || [],
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

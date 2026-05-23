@@ -178,41 +178,12 @@
     <div id="payPanel" class="w-full bg-white rounded-t-[24px] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl" onclick="event.stopPropagation()">
       <div class="w-10 h-1 bg-charcoal/10 rounded-full mx-auto mb-6"></div>
       <h3 class="text-lg font-bold text-charcoal text-center mb-1">升级会员</h3>
-      <p class="text-sm text-messageGray/50 text-center mb-6">免费次数已用完，升级会员无限畅聊</p>
+      <p class="text-sm text-messageGray/50 text-center mb-6">免费次数已用完，选择适合您的套餐</p>
 
-      <div class="grid grid-cols-2 gap-3 mb-6">
-        <!-- 日卡 -->
-        <label class="relative cursor-pointer group">
-          <input type="radio" name="plan" value="day" class="peer sr-only" checked>
-          <div class="border-2 border-borderLight rounded-2xl p-4 text-center transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold/5 hover:border-warmGold/30">
-            <div class="text-2xl font-bold text-charcoal mb-1">
-              <span class="text-sm font-normal text-messageGray/50">¥</span>9.9
-            </div>
-            <div class="text-xs text-messageGray/60 mb-2">日卡会员</div>
-            <div class="text-[11px] text-warmGold font-medium">24小时无限对话</div>
-          </div>
-          <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-warmGold rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-        </label>
+      <!-- 动态套餐列表 -->
+      <div id="plansList" class="flex flex-col gap-3 mb-6"></div>
 
-        <!-- 月卡 -->
-        <label class="relative cursor-pointer group">
-          <input type="radio" name="plan" value="month" class="peer sr-only">
-          <div class="border-2 border-borderLight rounded-2xl p-4 text-center transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold/5 hover:border-warmGold/30">
-            <div class="text-2xl font-bold text-charcoal mb-1">
-              <span class="text-sm font-normal text-messageGray/50">¥</span>29.9
-            </div>
-            <div class="text-xs text-messageGray/60 mb-2">月卡会员</div>
-            <div class="text-[11px] text-warmGold font-medium">30天无限对话</div>
-          </div>
-          <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-warmGold rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-        </label>
-      </div>
-
-      <button onclick="buyPlan()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98]">
+      <button id="confirmBuyBtn" onclick="buyPlan()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98]">
         立即购买
       </button>
       <button onclick="hidePayPanel()" class="w-full py-3 text-messageGray/40 text-xs mt-1">
@@ -225,7 +196,6 @@
     // ===================== 配置 =====================
     const API_BASE = 'https://bdpfqksdrtybxxmtgofs.supabase.co/functions/v1';
     const USER_ID_KEY = 'ai_worker_user_id';
-    const STORAGE_KEY = 'ai_worker_messages';
 
     // ===================== DOM 引用 =====================
     const chatArea = document.getElementById('chatArea');
@@ -242,7 +212,14 @@
     const toastText = document.getElementById('toastText');
     const payOverlay = document.getElementById('payOverlay');
     const payPanel = document.getElementById('payPanel');
+    const plansList = document.getElementById('plansList');
+    const confirmBuyBtn = document.getElementById('confirmBuyBtn');
     const inputFooter = document.getElementById('inputFooter');
+
+    // ===================== 状态 =====================
+    let currentPlans = [];
+    let selectedPlan = null;
+    let lastQuotaData = null;
 
     // ===================== 工具函数 =====================
     function generateUUID() {
@@ -284,6 +261,74 @@
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ===================== 套餐名称映射 =====================
+    const PLAN_LABELS = {
+      daily: '日卡',
+      weekly: '周卡',
+      monthly: '月卡',
+    };
+
+    // ===================== 套餐渲染 =====================
+    function renderPlans(plans) {
+      // 过滤掉 free，按价格排序
+      const buyable = plans
+        .filter(p => p.plan !== 'free')
+        .sort((a, b) => a.price - b.price);
+
+      currentPlans = buyable;
+      selectedPlan = buyable[0] || null;
+
+      plansList.innerHTML = buyable.map((plan, idx) => {
+        const isRecommended = plan.plan === 'weekly' || plan.plan === 'monthly';
+        const avgDaily = plan.duration_days > 0
+          ? (plan.price / plan.duration_days).toFixed(plan.plan === 'monthly' ? 1 : 1)
+          : null;
+        const avgLabel = plan.duration_days === 1 ? '¥' + plan.price + '/天' : '日均¥' + avgDaily;
+        const checked = idx === 0 ? 'checked' : '';
+
+        return `
+          <label class="relative cursor-pointer group block">
+            <input type="radio" name="plan" value="${plan.plan}" class="peer sr-only" ${checked} onchange="onPlanChange('${plan.plan}')">
+            <div class="border-2 border-borderLight rounded-2xl p-4 transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold/5 hover:border-warmGold/30">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold text-charcoal">${PLAN_LABELS[plan.plan] || plan.plan}</span>
+                  ${isRecommended ? `<span class="px-1.5 py-0.5 rounded bg-warmGold text-white text-[10px] font-bold">推荐</span>` : ''}
+                </div>
+                <div class="text-right">
+                  <span class="text-xs text-messageGray/40">${avgLabel}</span>
+                </div>
+              </div>
+              <div class="flex items-end justify-between">
+                <div>
+                  <span class="text-2xl font-bold text-charcoal">
+                    <span class="text-sm font-normal text-messageGray/50">¥</span>${plan.price}
+                  </span>
+                  <span class="text-xs text-messageGray/40 ml-1">${plan.duration_days}天</span>
+                </div>
+                <div class="text-xs text-messageGray/50">
+                  ${plan.total_limit}次对话
+                </div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-borderLight flex items-center justify-center transition-all duration-200 peer-checked:border-warmGold peer-checked:bg-warmGold">
+              <svg class="opacity-0 peer-checked:opacity-100 transition-opacity" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function onPlanChange(planKey) {
+      selectedPlan = currentPlans.find(p => p.plan === planKey);
+    }
+
     // ===================== 消息渲染 =====================
     function renderMessage(content, isUser) {
       const wrapper = document.createElement('div');
@@ -305,12 +350,6 @@
 
       messagesEl.appendChild(wrapper);
       scrollToBottom();
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     }
 
     function setLoading(show) {
@@ -347,13 +386,36 @@
 
     function updateQuotaUI(data) {
       if (!data) return;
-      if (data.is_member) {
+      lastQuotaData = data;
+
+      const membership = data.membership || 'free';
+      const dailyUsed = data.daily_used ?? 0;
+      const dailyLimit = data.daily_limit ?? 0;
+      const remaining = data.remaining ?? 0;
+
+      // 找到当前套餐的 total_limit（用于 weekly 显示剩余/总量）
+      const myPlan = data.plans?.find(p => p.plan === membership);
+      const totalLimit = myPlan?.total_limit;
+
+      if (membership === 'free') {
+        membershipBadge.classList.add('hidden');
+        quotaStatus.textContent = `剩余${remaining}次 · 升级会员`;
+      } else if (membership === 'daily') {
         membershipBadge.classList.remove('hidden');
-        quotaStatus.textContent = `会员有效 · 今日 ${data.daily_used}/${data.daily_limit}`;
+        membershipBadge.textContent = '日卡';
+        quotaStatus.textContent = `日卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
+      } else if (membership === 'weekly') {
+        membershipBadge.classList.remove('hidden');
+        membershipBadge.textContent = '周卡';
+        const remainText = totalLimit ? `${remaining}/${totalLimit}` : `${dailyUsed}/${dailyLimit}`;
+        quotaStatus.textContent = `周卡会员 · 剩余${remainText}次`;
+      } else if (membership === 'monthly') {
+        membershipBadge.classList.remove('hidden');
+        membershipBadge.textContent = '月卡';
+        quotaStatus.textContent = `月卡会员 · 今日${dailyUsed}/${dailyLimit}次`;
       } else {
         membershipBadge.classList.add('hidden');
-        const remaining = data.remaining ?? 0;
-        quotaStatus.textContent = `剩余 ${remaining} 次 · 今日 ${data.daily_used}/${data.daily_limit}`;
+        quotaStatus.textContent = `剩余${remaining}次`;
       }
     }
 
@@ -384,6 +446,12 @@
 
         if (res.status === 403) {
           setLoading(false);
+          // 如果接口返回了 plans，就用它来渲染
+          if (data.plans) {
+            renderPlans(data.plans);
+          } else if (lastQuotaData?.plans) {
+            renderPlans(lastQuotaData.plans);
+          }
           showPayPanel();
           return;
         }
@@ -428,11 +496,44 @@
     }
 
     async function buyPlan() {
-      const plan = document.querySelector('input[name="plan"]:checked')?.value || 'day';
-      const price = plan === 'day' ? '9.9' : '29.9';
-      showToast(`正在唤起支付: ¥${price}`, 'info');
-      hidePayPanel();
-      // TODO: 接入实际支付流程
+      if (!selectedPlan) {
+        showToast('请选择套餐');
+        return;
+      }
+
+      confirmBuyBtn.disabled = true;
+      confirmBuyBtn.textContent = '创建订单中...';
+
+      try {
+        const res = await fetch(`${API_BASE}/create-alipay-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: getUserId(),
+            plan: selectedPlan.plan,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || '创建订单失败');
+        }
+
+        if (data.pay_url && data.pay_url !== 'TODO') {
+          window.location.href = data.pay_url;
+        } else {
+          showToast('订单已创建，请完成支付', 'success');
+          hidePayPanel();
+          // 模拟支付成功后刷新（实际应通过回调或轮询确认）
+          setTimeout(() => fetchQuota(), 1500);
+        }
+      } catch (err) {
+        showToast(err.message || '购买失败，请重试');
+      } finally {
+        confirmBuyBtn.disabled = false;
+        confirmBuyBtn.textContent = '立即购买';
+      }
     }
 
     // ===================== 事件绑定 =====================
@@ -451,7 +552,10 @@
     // ===================== 初始化 =====================
     (async function init() {
       getUserId();
-      await fetchQuota();
+      const quota = await fetchQuota();
+      if (quota?.plans) {
+        renderPlans(quota.plans);
+      }
       inputEl.focus();
     })();
   </script>
