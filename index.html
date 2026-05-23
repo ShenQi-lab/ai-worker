@@ -192,6 +192,39 @@
     </div>
   </div>
 
+  <!-- 微信收款码支付弹窗 -->
+  <div id="qrOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center px-4" onclick="hideQrPanel(event)">
+    <div id="qrPanel" class="bg-white rounded-[24px] p-6 w-full max-w-[360px] shadow-2xl text-center" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-charcoal mb-5">微信扫码支付</h3>
+
+      <img id="qrImage" src="wechat-qr.jpg" alt="微信收款码" class="w-[250px] h-auto mx-auto rounded-xl mb-5 border border-borderLight" onerror="this.style.display='none';document.getElementById('qrFallback').classList.remove('hidden');">
+      <div id="qrFallback" class="hidden w-[250px] h-[250px] mx-auto rounded-xl bg-inputBg border border-borderLight flex items-center justify-center mb-5">
+        <span class="text-sm text-messageGray/40">请放置 wechat-qr.jpg</span>
+      </div>
+
+      <div class="mb-4">
+        <div class="text-sm text-messageGray/60 mb-1">请转账</div>
+        <div id="qrAmount" class="text-3xl font-bold text-charcoal">¥--</div>
+      </div>
+
+      <div class="bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+        <div class="text-xs text-red-400 mb-1">转账时必须备注</div>
+        <div id="qrUserId" class="text-sm font-mono font-semibold text-red-600 select-all break-all">--</div>
+      </div>
+
+      <p class="text-xs text-messageGray/50 mb-5 leading-relaxed">
+        转账后联系客服开通，一般5分钟内生效
+      </p>
+
+      <button onclick="confirmTransferred()" class="w-full py-3.5 bg-charcoal text-white rounded-2xl text-sm font-semibold transition-transform active:scale-[0.98] mb-2">
+        我已转账
+      </button>
+      <button onclick="hideQrPanel()" class="w-full py-3 text-messageGray/40 text-xs">
+        稍后再说
+      </button>
+    </div>
+  </div>
+
   <script>
     // ===================== 配置 =====================
     const API_BASE = 'https://bdpfqksdrtybxxmtgofs.supabase.co/functions/v1';
@@ -215,6 +248,10 @@
     const plansList = document.getElementById('plansList');
     const confirmBuyBtn = document.getElementById('confirmBuyBtn');
     const inputFooter = document.getElementById('inputFooter');
+    const qrOverlay = document.getElementById('qrOverlay');
+    const qrPanel = document.getElementById('qrPanel');
+    const qrAmount = document.getElementById('qrAmount');
+    const qrUserId = document.getElementById('qrUserId');
 
     // ===================== 状态 =====================
     let currentPlans = [];
@@ -495,45 +532,37 @@
       if (e.target === payOverlay) hidePayPanel();
     }
 
-    async function buyPlan() {
+    function buyPlan() {
       if (!selectedPlan) {
         showToast('请选择套餐');
         return;
       }
+      showQrPanel();
+    }
 
-      confirmBuyBtn.disabled = true;
-      confirmBuyBtn.textContent = '创建订单中...';
+    // ===================== 收款码支付弹窗 =====================
+    function showQrPanel() {
+      const uid = getUserId();
+      qrAmount.textContent = '¥' + selectedPlan.price;
+      qrUserId.textContent = '您的ID是 ' + uid;
+      qrOverlay.classList.remove('hidden');
+      qrOverlay.classList.add('overlay-in');
+      qrPanel.style.animation = 'fadeInUp 0.3s ease-out forwards';
+    }
 
-      try {
-        const res = await fetch(`${API_BASE}/create-alipay-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: getUserId(),
-            plan: selectedPlan.plan,
-          }),
-        });
+    function hideQrPanel(e) {
+      if (e && e.target !== qrOverlay && e.target !== qrPanel && !e.target.closest('#qrPanel')) return;
+      qrPanel.style.animation = '';
+      qrOverlay.classList.remove('overlay-in');
+      qrOverlay.classList.add('hidden');
+    }
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || '创建订单失败');
-        }
-
-        if (data.pay_url && data.pay_url !== 'TODO') {
-          window.location.href = data.pay_url;
-        } else {
-          showToast('订单已创建，请完成支付', 'success');
-          hidePayPanel();
-          // 模拟支付成功后刷新（实际应通过回调或轮询确认）
-          setTimeout(() => fetchQuota(), 1500);
-        }
-      } catch (err) {
-        showToast(err.message || '购买失败，请重试');
-      } finally {
-        confirmBuyBtn.disabled = false;
-        confirmBuyBtn.textContent = '立即购买';
-      }
+    function confirmTransferred() {
+      hideQrPanel();
+      hidePayPanel();
+      showToast('已记录，客服将尽快为您开通', 'success');
+      // 刷新配额状态
+      setTimeout(() => fetchQuota(), 1000);
     }
 
     // ===================== 事件绑定 =====================
